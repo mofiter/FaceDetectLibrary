@@ -6,7 +6,12 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
+import android.view.View;
 import android.view.WindowManager;
+import android.widget.Toast;
+
+import com.kongqw.CamShifting;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
@@ -15,10 +20,9 @@ import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Mat;
-import org.opencv.core.MatOfRect;
 import org.opencv.core.Rect;
+import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
-import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.CascadeClassifier;
 
@@ -27,7 +31,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class MainActivity extends AppCompatActivity implements CvCameraViewListener2 {
+public class MainActivity extends AppCompatActivity implements CvCameraViewListener2, View.OnTouchListener {
 
     private static final String TAG = "OCVSample::Activity";
     private static final Scalar FACE_RECT_COLOR = new Scalar(0, 255, 0, 255);
@@ -66,9 +70,9 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
 
                     try {
                         // load cascade file from application resources
-                        InputStream is = getResources().openRawResource(R.raw.haarcascade_upperbody);
+                        InputStream is = getResources().openRawResource(R.raw.lbpcascade_frontalface);
                         File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
-                        mCascadeFile = new File(cascadeDir, "haarcascade_upperbody.xml");
+                        mCascadeFile = new File(cascadeDir, "lbpcascade_frontalface.xml");
                         FileOutputStream os = new FileOutputStream(mCascadeFile);
 
                         byte[] buffer = new byte[4096];
@@ -96,6 +100,9 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
                     }
 
                     mOpenCvCameraView.enableView();
+
+                    cs = new CamShifting();
+                    mTrackWindow = new Rect[1];
                 }
                 break;
                 default: {
@@ -105,6 +112,11 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
             }
         }
     };
+
+    private CamShifting cs;
+    private boolean isTracking = false;
+    private Rect[] facesArray;
+    private Rect[] mTrackWindow;
 
     public MainActivity() {
         mDetectorName = new String[2];
@@ -124,6 +136,7 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
         mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.fd_activity_surface_view);
         mOpenCvCameraView.setVisibility(CameraBridgeViewBase.VISIBLE);
         mOpenCvCameraView.setCvCameraViewListener(this);
+        mOpenCvCameraView.setOnTouchListener(this);
     }
 
     @Override
@@ -165,30 +178,53 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
         mRgba = inputFrame.rgba();
         mGray = inputFrame.gray();
 
-        if (mAbsoluteFaceSize == 0) {
-            int height = mGray.rows();
-            if (Math.round(height * mRelativeFaceSize) > 0) {
-                mAbsoluteFaceSize = Math.round(height * mRelativeFaceSize);
-            }
-//            mNativeDetector.setMinFaceSize(mAbsoluteFaceSize);
-        }
-
-        MatOfRect faces = new MatOfRect();
-
-        if (mDetectorType == JAVA_DETECTOR) {
-            if (mJavaDetector != null)
-                mJavaDetector.detectMultiScale(mGray, faces, 1.1, 5, 2, // TODO: objdetect.CV_HAAR_SCALE_IMAGE
-                        new Size(mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
-        } else if (mDetectorType == NATIVE_DETECTOR) {
-//            if (mNativeDetector != null)
-//                mNativeDetector.detect(mGray, faces);
+        if (!isTracking) {
+//            if (mAbsoluteFaceSize == 0) {
+//                int height = mGray.rows();
+//                if (Math.round(height * mRelativeFaceSize) > 0) {
+//                    mAbsoluteFaceSize = Math.round(height * mRelativeFaceSize);
+//                }
+////            mNativeDetector.setMinFaceSize(mAbsoluteFaceSize);
+//            }
+//
+//            MatOfRect faces = new MatOfRect();
+//            if (mJavaDetector != null) {
+//                mJavaDetector.detectMultiScale(
+//                        mGray,
+//                        faces,
+//                        1.1,
+//                        5,
+//                        2, // TODO: objdetect.CV_HAAR_SCALE_IMAGE
+//                        new Size(mAbsoluteFaceSize, mAbsoluteFaceSize),
+//                        new Size()
+//                );
+//            }
+//
+//            facesArray = faces.toArray();
+//            for (int i = 0; i < facesArray.length; i++) {
+//                Imgproc.rectangle(mRgba, facesArray[i].tl(), facesArray[i].br(), FACE_RECT_COLOR, 3);
+//                cs.create_tracked_object(mRgba, facesArray, cs);
+////                isTracking = true;
+//            }
         } else {
-            Log.e(TAG, "Detection method is not selected!");
+            Log.i(TAG, "onCameraFrame: cs = " + cs + "  mTrackWindow = " + mTrackWindow);
+            RotatedRect rotatedRect = cs.camshift_track_face(mRgba, mTrackWindow, cs);
+//            Imgproc.ellipse(mRgba, rotatedRect, FACE_RECT_COLOR, 6);
+            Imgproc.ellipse(mRgba, rotatedRect, FACE_RECT_COLOR, 6);
+            // Imgproc.rectangle(mRgba, facesArray[0].tl(), facesArray[0].br(), FACE_RECT_COLOR, 3);
+
+            Rect rect = rotatedRect.boundingRect();
+
+            double x = rotatedRect.center.x;
+            double y = rotatedRect.center.y;
+            Log.i(TAG, "onCameraFrame: 目标坐标[ " + x + " , " + y + " ]");
+
+            Imgproc.rectangle(mRgba, rect.tl(), rect.br(), FACE_RECT_COLOR, 3);
+
+//            mTrackWindow[0] = rotatedRect.boundingRect();
         }
 
-        Rect[] facesArray = faces.toArray();
-        for (int i = 0; i < facesArray.length; i++)
-            Imgproc.rectangle(mRgba, facesArray[i].tl(), facesArray[i].br(), FACE_RECT_COLOR, 3);
+        System.gc();
 
         return mRgba;
     }
@@ -231,14 +267,50 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
     private void setDetectorType(int type) {
         if (mDetectorType != type) {
             mDetectorType = type;
-
-//            if (type == NATIVE_DETECTOR) {
-//                Log.i(TAG, "Detection Based Tracker enabled");
-//                mNativeDetector.start();
-//            } else {
-//                Log.i(TAG, "Cascade detector enabled");
-//                mNativeDetector.stop();
-//            }
         }
+    }
+
+    private int winWidth = 200;
+    int xDown;
+    int yDown;
+
+    @Override
+    public boolean onTouch(View v, MotionEvent event) {
+        int cols = mRgba.cols();
+        int rows = mRgba.rows();
+        int xOffset = (mOpenCvCameraView.getWidth() - cols) / 2;
+        int yOffset = (mOpenCvCameraView.getHeight() - rows) / 2;
+
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                xDown = (int) event.getX() - xOffset;
+                yDown = (int) event.getY() - yOffset;
+                break;
+            case MotionEvent.ACTION_UP:
+                int xUp = (int) event.getX() - xOffset;
+                int yUp = (int) event.getY() - yOffset;
+
+                Rect rect = new Rect(Math.min(xDown, xUp), Math.min(yDown, yUp), Math.abs(xUp - xDown), Math.abs(yUp - yDown));
+                mTrackWindow[0] = rect;
+
+                cs.create_tracked_object(mRgba, mTrackWindow, cs);
+
+                isTracking = true;
+                Toast.makeText(getApplicationContext(), "已经选中跟踪目标！", Toast.LENGTH_SHORT).show();
+                break;
+            default:
+                break;
+        }
+
+
+//        if ((x < 0) || (y < 0) || (x > cols) || (y > rows))
+//            return false;
+//        Rect rect = new Rect(x - winWidth / 2, y - winWidth / 2, winWidth, winWidth);
+//        mTrackWindow[0] = rect;
+//
+//        cs.create_tracked_object(mRgba, mTrackWindow, cs);
+//
+//        isTracking = true;
+        return true;
     }
 }
