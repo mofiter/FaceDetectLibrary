@@ -1,6 +1,7 @@
 package com.kongqw.opencvforandroid320;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -9,9 +10,10 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.ImageView;
 import android.widget.Toast;
 
-import com.kongqw.CamShifting;
+import com.kongqw.ObjectTracker;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
@@ -48,13 +50,9 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
     private Mat mGray;
     private File mCascadeFile;
     private CascadeClassifier mJavaDetector;
-//    private DetectionBasedTracker mNativeDetector;
 
     private int mDetectorType = JAVA_DETECTOR;
     private String[] mDetectorName;
-
-    private float mRelativeFaceSize = 0.2f;
-    private int mAbsoluteFaceSize = 0;
 
     private CameraBridgeViewBase mOpenCvCameraView;
 
@@ -90,8 +88,6 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
                         } else
                             Log.i(TAG, "Loaded cascade classifier from " + mCascadeFile.getAbsolutePath());
 
-                        // mNativeDetector = new DetectionBasedTracker(mCascadeFile.getAbsolutePath(), 0);
-
                         cascadeDir.delete();
 
                     } catch (IOException e) {
@@ -100,9 +96,6 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
                     }
 
                     mOpenCvCameraView.enableView();
-
-                    cs = new CamShifting();
-                    mTrackWindow = new Rect[1];
                 }
                 break;
                 default: {
@@ -113,10 +106,9 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
         }
     };
 
-    private CamShifting cs;
-    private boolean isTracking = false;
-    private Rect[] facesArray;
-    private Rect[] mTrackWindow;
+    private ObjectTracker objectTracker;
+    private Rect mTrackWindow;
+    private ImageView imageView;
 
     public MainActivity() {
         mDetectorName = new String[2];
@@ -137,6 +129,8 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
         mOpenCvCameraView.setVisibility(CameraBridgeViewBase.VISIBLE);
         mOpenCvCameraView.setCvCameraViewListener(this);
         mOpenCvCameraView.setOnTouchListener(this);
+
+        imageView = (ImageView) findViewById(R.id.imageView);
     }
 
     @Override
@@ -178,60 +172,37 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
         mRgba = inputFrame.rgba();
         mGray = inputFrame.gray();
 
-        if (!isTracking) {
-//            if (mAbsoluteFaceSize == 0) {
-//                int height = mGray.rows();
-//                if (Math.round(height * mRelativeFaceSize) > 0) {
-//                    mAbsoluteFaceSize = Math.round(height * mRelativeFaceSize);
-//                }
-////            mNativeDetector.setMinFaceSize(mAbsoluteFaceSize);
-//            }
-//
-//            MatOfRect faces = new MatOfRect();
-//            if (mJavaDetector != null) {
-//                mJavaDetector.detectMultiScale(
-//                        mGray,
-//                        faces,
-//                        1.1,
-//                        5,
-//                        2, // TODO: objdetect.CV_HAAR_SCALE_IMAGE
-//                        new Size(mAbsoluteFaceSize, mAbsoluteFaceSize),
-//                        new Size()
-//                );
-//            }
-//
-//            facesArray = faces.toArray();
-//            for (int i = 0; i < facesArray.length; i++) {
-//                Imgproc.rectangle(mRgba, facesArray[i].tl(), facesArray[i].br(), FACE_RECT_COLOR, 3);
-//                cs.create_tracked_object(mRgba, facesArray, cs);
-////                isTracking = true;
-//            }
-        } else {
-            Log.i(TAG, "onCameraFrame: cs = " + cs + "  mTrackWindow = " + mTrackWindow);
-            RotatedRect rotatedRect = cs.camshift_track_face(mRgba, mTrackWindow, cs);
-//            Imgproc.ellipse(mRgba, rotatedRect, FACE_RECT_COLOR, 6);
-            Imgproc.ellipse(mRgba, rotatedRect, FACE_RECT_COLOR, 6);
-            // Imgproc.rectangle(mRgba, facesArray[0].tl(), facesArray[0].br(), FACE_RECT_COLOR, 3);
-
-            Rect rect = rotatedRect.boundingRect();
-
-            double x = rotatedRect.center.x;
-            double y = rotatedRect.center.y;
-            Log.i(TAG, "onCameraFrame: 目标坐标[ " + x + " , " + y + " ]");
-
-            Imgproc.rectangle(mRgba, rect.tl(), rect.br(), FACE_RECT_COLOR, 3);
-
-//            mTrackWindow[0] = rotatedRect.boundingRect();
+        if (null == objectTracker) {
+            objectTracker = new ObjectTracker(mRgba) {
+                @Override
+                public void onCalcBackProject(final Bitmap prob) {
+                    MainActivity.this.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            imageView.setImageBitmap(prob);
+                        }
+                    });
+                }
+            };
         }
 
-        System.gc();
+        if (null != mTrackWindow) {
+
+            Log.i(TAG, "onCameraFrame: objectTracker = " + objectTracker + "  mTrackWindow = " + mTrackWindow);
+            RotatedRect rotatedRect = objectTracker.objectTracking(mRgba);
+            Imgproc.ellipse(mRgba, rotatedRect, FACE_RECT_COLOR, 6);
+
+            Rect rect = rotatedRect.boundingRect();
+            Imgproc.rectangle(mRgba, rect.tl(), rect.br(), FACE_RECT_COLOR, 3);
+        }
+
+        // System.gc();
 
         return mRgba;
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        Log.i(TAG, "called onCreateOptionsMenu");
         mItemFace50 = menu.add("Face size 50%");
         mItemFace40 = menu.add("Face size 40%");
         mItemFace30 = menu.add("Face size 30%");
@@ -243,25 +214,16 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         Log.i(TAG, "called onOptionsItemSelected; selected item: " + item);
-        if (item == mItemFace50)
-            setMinFaceSize(0.5f);
-        else if (item == mItemFace40)
-            setMinFaceSize(0.4f);
-        else if (item == mItemFace30)
-            setMinFaceSize(0.3f);
-        else if (item == mItemFace20)
-            setMinFaceSize(0.2f);
-        else if (item == mItemType) {
+        if (item == mItemFace50) {
+        } else if (item == mItemFace40) {
+        } else if (item == mItemFace30) {
+        } else if (item == mItemFace20) {
+        } else if (item == mItemType) {
             int tmpDetectorType = (mDetectorType + 1) % mDetectorName.length;
             item.setTitle(mDetectorName[tmpDetectorType]);
             setDetectorType(tmpDetectorType);
         }
         return true;
-    }
-
-    private void setMinFaceSize(float faceSize) {
-        mRelativeFaceSize = faceSize;
-        mAbsoluteFaceSize = 0;
     }
 
     private void setDetectorType(int type) {
@@ -270,7 +232,6 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
         }
     }
 
-    private int winWidth = 200;
     int xDown;
     int yDown;
 
@@ -290,27 +251,18 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
                 int xUp = (int) event.getX() - xOffset;
                 int yUp = (int) event.getY() - yOffset;
 
-                Rect rect = new Rect(Math.min(xDown, xUp), Math.min(yDown, yUp), Math.abs(xUp - xDown), Math.abs(yUp - yDown));
-                mTrackWindow[0] = rect;
+                // 获取跟踪目标
+                mTrackWindow = new Rect(Math.min(xDown, xUp), Math.min(yDown, yUp), Math.abs(xUp - xDown), Math.abs(yUp - yDown));
 
-                cs.create_tracked_object(mRgba, mTrackWindow, cs);
+                // 创建跟踪目标
+                Bitmap bitmap = objectTracker.createTrackedObject(mRgba, mTrackWindow);
+                imageView.setImageBitmap(bitmap);
 
-                isTracking = true;
                 Toast.makeText(getApplicationContext(), "已经选中跟踪目标！", Toast.LENGTH_SHORT).show();
                 break;
             default:
                 break;
         }
-
-
-//        if ((x < 0) || (y < 0) || (x > cols) || (y > rows))
-//            return false;
-//        Rect rect = new Rect(x - winWidth / 2, y - winWidth / 2, winWidth, winWidth);
-//        mTrackWindow[0] = rect;
-//
-//        cs.create_tracked_object(mRgba, mTrackWindow, cs);
-//
-//        isTracking = true;
         return true;
     }
 }

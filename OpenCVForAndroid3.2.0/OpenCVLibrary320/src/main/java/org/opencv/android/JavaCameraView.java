@@ -159,7 +159,9 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
                     }
 
                     mCamera.setParameters(params);
+
                     params = mCamera.getParameters();
+
 
                     mFrameWidth = params.getPreviewSize().width;
                     mFrameHeight = params.getPreviewSize().height;
