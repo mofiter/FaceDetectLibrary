@@ -65,6 +65,7 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
 
                     // Load native library after(!) OpenCV initialization
                     // System.loadLibrary("detection_based_tracker");
+
                     try {
                         // load cascade file from application resources
                         InputStream is = getResources().openRawResource(R.raw.lbpcascade_frontalface);
