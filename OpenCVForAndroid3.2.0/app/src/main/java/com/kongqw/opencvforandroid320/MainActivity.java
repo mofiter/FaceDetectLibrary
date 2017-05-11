@@ -1,9 +1,9 @@
 package com.kongqw.opencvforandroid320;
 
+import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -33,7 +33,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class MainActivity extends AppCompatActivity implements CvCameraViewListener2, View.OnTouchListener {
+public class MainActivity extends Activity implements CvCameraViewListener2, View.OnTouchListener {
 
     private static final String TAG = "MainActivity";
     private static final Scalar FACE_RECT_COLOR = new Scalar(0, 255, 0, 255);
