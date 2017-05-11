@@ -35,7 +35,7 @@ import java.io.InputStream;
 
 public class MainActivity extends AppCompatActivity implements CvCameraViewListener2, View.OnTouchListener {
 
-    private static final String TAG = "OCVSample::Activity";
+    private static final String TAG = "MainActivity";
     private static final Scalar FACE_RECT_COLOR = new Scalar(0, 255, 0, 255);
     public static final int JAVA_DETECTOR = 0;
     public static final int NATIVE_DETECTOR = 1;
@@ -65,7 +65,6 @@ public class MainActivity extends AppCompatActivity implements CvCameraViewListe
 
                     // Load native library after(!) OpenCV initialization
                     // System.loadLibrary("detection_based_tracker");
-
                     try {
                         // load cascade file from application resources
                         InputStream is = getResources().openRawResource(R.raw.lbpcascade_frontalface);
