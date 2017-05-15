@@ -22,26 +22,7 @@ android {
 
 //    externalNativeBuild {
 //        cmake {
-//            path "src/main/jni/CMakeLists.txt"
-//        }
-//    }
-
-//    sourceSets {
-//        main {
-//            jni.srcDirs = []
-////            jniLibs.srcDir 'src/main/jni'
-////            manifest.srcFile 'AndroidManifest.xml'
-//            // jni.srcDirs = ['src/main/jni', 'src/main/jni/']
-////            java.srcDirs = ['src']
-////            resources.srcDirs = ['src']
-////            res.srcDirs = ['res']
-////            aidl.srcDirsirs = ['src']
-//        }
-//    }
-
-//    externalNativeBuild {
-//        cmake {
-//            path "src/main/jni/CMakeLists.txt"
+//            path "src/main/cpp/CMakeLists.txt"
 //        }
 //    }
 }
