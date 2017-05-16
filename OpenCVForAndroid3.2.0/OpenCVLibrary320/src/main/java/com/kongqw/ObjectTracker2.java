@@ -3,6 +3,8 @@ package com.kongqw;
 import android.graphics.Bitmap;
 import android.util.Log;
 
+import com.kongqw.listener.OnCalcBackProjectListener;
+
 import org.opencv.android.Utils;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
@@ -27,6 +29,7 @@ import java.util.Vector;
 public class ObjectTracker2 {
 
     private static final String TAG = "ObjectTracker2";
+    private OnCalcBackProjectListener mOnCalcBackProjectListener;
     private Mat hsv, hue, mask, prob;
     private Rect trackRect;
     private RotatedRect rotatedRect;
@@ -111,8 +114,8 @@ public class ObjectTracker2 {
 
         updateHueImage();
         // 计算直方图的反投影。
-        // Imgproc.calcBackProject(hueList, new MatOfInt(0), hist, prob, ranges, 255);
-        Imgproc.calcBackProject(hueList, new MatOfInt(0), hist, prob, ranges, 1.0);
+         Imgproc.calcBackProject(hueList, new MatOfInt(0), hist, prob, ranges, 255);
+//        Imgproc.calcBackProject(hueList, new MatOfInt(0), hist, prob, ranges, 1.0);
 
         // 计算两个数组的按位连接（dst = src1 & src2）计算两个数组或数组和标量的每个元素的逐位连接。
         Core.bitwise_and(prob, mask, prob, new Mat());
@@ -120,7 +123,6 @@ public class ObjectTracker2 {
         // 追踪目标
         rotatedRect = Video.CamShift(prob, trackRect, new TermCriteria(TermCriteria.EPS, 10, 1));
 
-        Log.i(TAG, "objectTracking: mOnCalcBackProjectListener = " + mOnCalcBackProjectListener);
         if (null != mOnCalcBackProjectListener) {
             mOnCalcBackProjectListener.onCalcBackProject(prob);
         }
@@ -130,21 +132,16 @@ public class ObjectTracker2 {
 
         Imgproc.rectangle(prob, trackRect.tl(), trackRect.br(), new Scalar(255, 255, 0, 255), 6);
 
-        // Utils.matToBitmap(prob, bitmap);
-
-        // onCalcBackProject(bitmap);
-
         Log.i(TAG, "objectTracking: 宽度 : " + trackRect.width + "  高度 : " + trackRect.height + "  角度 : " + rotatedRect.angle);
         return rotatedRect;
     }
 
-    private OnCalcBackProjectListener mOnCalcBackProjectListener;
-
+    /**
+     * 添加直方图反投影的监听
+     *
+     * @param listener listener
+     */
     public void setOnCalcBackProjectListener(OnCalcBackProjectListener listener) {
         mOnCalcBackProjectListener = listener;
-    }
-
-    public interface OnCalcBackProjectListener {
-        void onCalcBackProject(Mat backProject);
     }
 }

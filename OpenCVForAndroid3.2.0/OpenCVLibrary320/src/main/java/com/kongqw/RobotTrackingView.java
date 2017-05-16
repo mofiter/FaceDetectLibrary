@@ -8,7 +8,8 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Toast;
 
-import com.kongqw.listener.OpenCVLoadListener;
+import com.kongqw.listener.OnCalcBackProjectListener;
+import com.kongqw.listener.OnOpenCVLoadListener;
 
 import org.opencv.R;
 import org.opencv.android.BaseLoaderCallback;
@@ -24,6 +25,7 @@ import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.CascadeClassifier;
+import org.opencv.objdetect.Objdetect;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -38,8 +40,8 @@ public class RobotTrackingView extends JavaCameraView implements CameraBridgeVie
 
     private static final String TAG = "RobotCameraView";
     private static final Scalar FACE_RECT_COLOR = new Scalar(0, 255, 0, 255);
-    private CascadeClassifier mJavaDetector;
-    private OpenCVLoadListener mOpenCVLoadListener;
+    private CascadeClassifier mFaceDetector;
+    private OnOpenCVLoadListener mOpenCVLoadListener;
 
     private Mat mRgba;
     private Mat mGray;
@@ -79,7 +81,6 @@ public class RobotTrackingView extends JavaCameraView implements CameraBridgeVie
         public void onManagerConnected(int status) {
             switch (status) {
                 case LoaderCallbackInterface.SUCCESS:
-                    Log.i(TAG, "onManagerConnected: 1");
                     if (null != mOpenCVLoadListener) {
                         mOpenCVLoadListener.onOpenCVLoadSuccess();
                     }
@@ -97,9 +98,9 @@ public class RobotTrackingView extends JavaCameraView implements CameraBridgeVie
                         is.close();
                         os.close();
 
-                        mJavaDetector = new CascadeClassifier(cascadeFile.getAbsolutePath());
-                        if (mJavaDetector.empty()) {
-                            mJavaDetector = null;
+                        mFaceDetector = new CascadeClassifier(cascadeFile.getAbsolutePath());
+                        if (mFaceDetector.empty()) {
+                            mFaceDetector = null;
                         }
 
                         // mNativeDetector = new DetectionBasedTracker(mCascadeFile.getAbsolutePath(), 0);
@@ -109,8 +110,6 @@ public class RobotTrackingView extends JavaCameraView implements CameraBridgeVie
                         e.printStackTrace();
                     }
                     enableView();
-
-                    Log.i(TAG, "onManagerConnected: 3");
                     break;
                 default:
                     if (null != mOpenCVLoadListener) {
@@ -124,7 +123,6 @@ public class RobotTrackingView extends JavaCameraView implements CameraBridgeVie
 
     @Override
     public void onCameraViewStarted(int width, int height) {
-        Log.i(TAG, "onCameraViewStarted: 2");
         mGray = new Mat();
         mRgba = new Mat();
 
@@ -175,27 +173,27 @@ public class RobotTrackingView extends JavaCameraView implements CameraBridgeVie
             Rect rect = rotatedRect.boundingRect();
             Imgproc.rectangle(mRgba, rect.tl(), rect.br(), FACE_RECT_COLOR, 3);
         }
-//
-//        // 使用Java人脸检测
-//        if (mJavaDetector != null)
-//            mJavaDetector.detectMultiScale(
-//                    mGray, // 要检查的灰度图像
-//                    mFaces, // 检测到的人脸
-//                    1.1, // 表示在前后两次相继的扫描中，搜索窗口的比例系数。默认为1.1即每次搜索窗口依次扩大10%;
-//                    10, // 默认是3 控制误检测，表示默认几次重叠检测到人脸，才认为人脸存在
-//                    Objdetect.CASCADE_SCALE_IMAGE,
-//                    getMinSize(), // 目标最小可能的大小
-//                    mMaxSize); // 目标最大可能的大小
-//
-//
-//        Rect[] facesArray = mFaces.toArray();
-//        Log.i(TAG, "onCameraFrame: mAbsoluteFaceSize = " + mAbsoluteFaceSize);
-//        Log.i(TAG, "onCameraFrame: facesArray " + facesArray.length);
-//
-//        for (Rect rect : facesArray) {
-//            // 在屏幕上画出人脸位置
-//            Imgproc.rectangle(mRgba, rect.tl(), rect.br(), FACE_RECT_COLOR, 3);
-//        }
+
+        // 使用Java人脸检测
+        if (mFaceDetector != null)
+            mFaceDetector.detectMultiScale(
+                    mGray, // 要检查的灰度图像
+                    mFaces, // 检测到的人脸
+                    1.1, // 表示在前后两次相继的扫描中，搜索窗口的比例系数。默认为1.1即每次搜索窗口依次扩大10%;
+                    10, // 默认是3 控制误检测，表示默认几次重叠检测到人脸，才认为人脸存在
+                    Objdetect.CASCADE_SCALE_IMAGE,
+                    getMinSize(), // 目标最小可能的大小
+                    mMaxSize); // 目标最大可能的大小
+
+
+        Rect[] facesArray = mFaces.toArray();
+        Log.i(TAG, "onCameraFrame: mAbsoluteFaceSize = " + mAbsoluteFaceSize);
+        Log.i(TAG, "onCameraFrame: facesArray " + facesArray.length);
+
+        for (Rect rect : facesArray) {
+            // 在屏幕上画出人脸位置
+            Imgproc.rectangle(mRgba, rect.tl(), rect.br(), FACE_RECT_COLOR, 3);
+        }
         return mRgba;
     }
 
@@ -255,14 +253,14 @@ public class RobotTrackingView extends JavaCameraView implements CameraBridgeVie
         return true;
     }
 
-    public void setOnCalcBackProjectListener(ObjectTracker2.OnCalcBackProjectListener listener) {
+    public void setOnCalcBackProjectListener(OnCalcBackProjectListener listener) {
         if (null == objectTracker) {
             objectTracker = new ObjectTracker2();
         }
         objectTracker.setOnCalcBackProjectListener(listener);
     }
 
-    public void setOnOpenCVLoadListener(OpenCVLoadListener listener) {
+    public void setOnOpenCVLoadListener(OnOpenCVLoadListener listener) {
         mOpenCVLoadListener = listener;
     }
 

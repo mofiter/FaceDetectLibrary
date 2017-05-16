@@ -34,6 +34,7 @@ public class RobotPhotographView extends JavaCameraView implements CameraBridgeV
     private static final String TAG = "RobotCameraView";
     private static final Scalar FACE_RECT_COLOR = new Scalar(0, 255, 0, 255);
     private CascadeClassifier mJavaDetector;
+    // private DetectionBasedTracker mNativeDetector;
 
     private Mat mRgba;
     private Mat mGray;
@@ -70,6 +71,9 @@ public class RobotPhotographView extends JavaCameraView implements CameraBridgeV
         public void onManagerConnected(int status) {
             switch (status) {
                 case LoaderCallbackInterface.SUCCESS: {
+
+                    // System.loadLibrary("detection_based_tracker");
+
                     try {
                         InputStream is = getResources().openRawResource(R.raw.lbpcascade_frontalface);
                         File cascadeDir = getContext().getApplicationContext().getDir("cascade", Context.MODE_PRIVATE);
@@ -89,9 +93,9 @@ public class RobotPhotographView extends JavaCameraView implements CameraBridgeV
                             mJavaDetector = null;
                         }
 
-                        // mNativeDetector = new DetectionBasedTracker(mCascadeFile.getAbsolutePath(), 0);
+                        // mNativeDetector = new DetectionBasedTracker(cascadeFile.getAbsolutePath(), 0);
 
-                        // cascadeDir.delete();
+                        cascadeDir.delete();
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -136,6 +140,9 @@ public class RobotPhotographView extends JavaCameraView implements CameraBridgeV
             }
         }
         mMinSize.width = mMinSize.height = mAbsoluteFaceSize;
+
+        // mNativeDetector.setMinFaceSize(mAbsoluteFaceSize);
+
         return mMinSize;
     }
 
@@ -157,6 +164,11 @@ public class RobotPhotographView extends JavaCameraView implements CameraBridgeV
                     getMinSize(), // 目标最小可能的大小
                     mMaxSize); // 目标最大可能的大小
 
+//        getMinSize();
+//        if (mNativeDetector != null) {
+//            mNativeDetector.detect(mGray, mFaces);
+//            Log.i(TAG, "onCameraFrame: mNativeDetector");
+//        }
 
         Rect[] facesArray = mFaces.toArray();
         Log.i(TAG, "onCameraFrame: mAbsoluteFaceSize = " + mAbsoluteFaceSize);

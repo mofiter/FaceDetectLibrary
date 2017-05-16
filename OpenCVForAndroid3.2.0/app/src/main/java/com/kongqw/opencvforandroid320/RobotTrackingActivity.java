@@ -8,9 +8,9 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.ImageView;
 
-import com.kongqw.ObjectTracker2;
 import com.kongqw.RobotTrackingView;
-import com.kongqw.listener.OpenCVLoadListener;
+import com.kongqw.listener.OnCalcBackProjectListener;
+import com.kongqw.listener.OnOpenCVLoadListener;
 
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
@@ -29,10 +29,10 @@ public class RobotTrackingActivity extends Activity {
         setContentView(R.layout.activity_robot_tracking);
 
         robotTrackingView = (RobotTrackingView) findViewById(R.id.tracking_view);
-        robotTrackingView.setOnOpenCVLoadListener(new OpenCVLoadListener() {
+        robotTrackingView.setOnOpenCVLoadListener(new OnOpenCVLoadListener() {
             @Override
             public void onOpenCVLoadSuccess() {
-                robotTrackingView.setOnCalcBackProjectListener(new ObjectTracker2.OnCalcBackProjectListener() {
+                robotTrackingView.setOnCalcBackProjectListener(new OnCalcBackProjectListener() {
                     @Override
                     public void onCalcBackProject(final Mat backProject) {
                         Log.i(TAG, "onCalcBackProject: " + backProject);
