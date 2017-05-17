@@ -62,7 +62,8 @@ public class ObjectTracker {
         Mat tempMask = mask.submat(region);
 
         // MatOfFloat ranges = new MatOfFloat(0f, 256f);
-        MatOfInt histSize = new MatOfInt(25);
+        // MatOfInt histSize = new MatOfInt(25);
+        MatOfInt histSize = new MatOfInt(255);
 
         List<Mat> images = Collections.singletonList(hueList.get(0).submat(region));
         Imgproc.calcHist(images, new MatOfInt(0), tempMask, hist, histSize, ranges);

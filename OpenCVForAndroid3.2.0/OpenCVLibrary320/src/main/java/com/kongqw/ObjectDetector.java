@@ -93,13 +93,15 @@ public class ObjectDetector {
     }
 
     /**
-     * 检测目标
+     * 目标检测
      *
-     * @param detector           识别器
-     * @param relativeObjectSize 最小大小占比
-     * @return 识别到的目标
+     * @param detector     detector
+     * @param gray         gray
+     * @param minNeighbors minNeighbors
+     * @param minSize      minSize
+     * @return 目标
      */
-    public Rect[] detectObject(CascadeClassifier detector, Mat gray, float relativeObjectSize) {
+    private Rect[] detectObject(CascadeClassifier detector, Mat gray, int minNeighbors, Size minSize) {
 
         // 使用Java人脸检测
         if (detector != null) {
@@ -107,15 +109,90 @@ public class ObjectDetector {
                     gray, // 要检查的灰度图像
                     mObject, // 检测到的人脸
                     1.1, // 表示在前后两次相继的扫描中，搜索窗口的比例系数。默认为1.1即每次搜索窗口依次扩大10%;
-                    6, // 默认是3 控制误检测，表示默认几次重叠检测到人脸，才认为人脸存在
-                    Objdetect.CASCADE_SCALE_IMAGE,
-                    getMinSize(gray.cols(), gray.rows(), relativeObjectSize), // 目标最小可能的大小
+                    minNeighbors, // 默认是3 控制误检测，表示默认几次重叠检测到人脸，才认为人脸存在
+                    Objdetect.CASCADE_SCALE_IMAGE/* | Objdetect.CASCADE_DO_CANNY_PRUNING*/,
+                    // Objdetect.CASCADE_FIND_BIGGEST_OBJECT,
+                    // getMinSize(gray.cols(), gray.rows(), relativeObjectSize), // 目标最小可能的大小
+                    minSize, // 目标最小可能的大小
                     mMaxSize); // 目标最大可能的大小
+
 
             return mObject.toArray();
         } else {
             return null;
         }
+    }
+
+    /**
+     * 检测一张脸
+     *
+     * @param detector detector
+     * @param gray     gray
+     * @return 一张人脸位置
+     */
+    public Rect detectFace(CascadeClassifier detector, Mat gray/*, float relativeObjectSize*/) {
+
+        Rect[] faces = detectObject(
+                detector,
+                gray,
+                6,
+                getMinSize(gray.cols(), gray.rows(), 0.2F, 0.2F)
+        );
+        if (null != faces && 0 < faces.length) {
+//            Rect face = faces[0];
+//
+//            double[] doubles = {face.br().x + ((double) face.width / 4), face.br().y + ((double) face.height / 4)};
+//            face.set(doubles);
+//
+//            face.width /= 2;
+//            face.height /= 2;
+//
+//            Rect rect = new Rect((int) face.tl().x + face.width / 4, (int) face.tl().y + face.height / 4, face.width / 2, face.height / 2);
+            return faces[0];
+        }
+        return null;
+    }
+
+    /**
+     * 上半身检测
+     *
+     * @param detector detector
+     * @param gray     gray
+     * @return 上半身位置
+     */
+    public Rect detectUpperBody(CascadeClassifier detector, Mat gray/*, float relativeObjectWidth, float relativeObjectHeight*/) {
+
+        Rect[] upperBody = detectObject(
+                detector,
+                gray,
+                2,
+                getMinSize(gray.cols(), gray.rows(), 0.2F, 0.4F)
+        );
+        if (null != upperBody && 0 < upperBody.length) {
+            return upperBody[0];
+        }
+        return null;
+    }
+
+    /**
+     * 全身检测
+     *
+     * @param detector detector
+     * @param gray     gray
+     * @return 全身位置
+     */
+    public Rect detectFullBody(CascadeClassifier detector, Mat gray/*, float relativeObjectWidth, float relativeObjectHeight*/) {
+
+        Rect[] fullBody = detectObject(
+                detector,
+                gray,
+                2,
+                getMinSize(gray.cols(), gray.rows(), 0.1F, 0.5F)
+        );
+        if (null != fullBody && 0 < fullBody.length) {
+            return fullBody[0];
+        }
+        return null;
     }
 
 //    /**
@@ -139,14 +216,15 @@ public class ObjectDetector {
     /**
      * 获取检测对象的最小大小
      *
-     * @param cameraWidth        图像宽度
-     * @param cameraHeight       图像高度
-     * @param relativeObjectSize 屏占比
+     * @param cameraWidth          图像宽度
+     * @param cameraHeight         图像高度
+     * @param relativeObjectWidth  屏宽占比
+     * @param relativeObjectHeight 屏高占比
      * @return 大小
      */
-    private Size getMinSize(int cameraWidth, int cameraHeight, float relativeObjectSize) {
-        int width = Math.round(cameraWidth * relativeObjectSize);
-        int height = Math.round(cameraHeight * relativeObjectSize);
+    private Size getMinSize(int cameraWidth, int cameraHeight, float relativeObjectWidth, float relativeObjectHeight) {
+        int width = Math.round(cameraWidth * relativeObjectWidth);
+        int height = Math.round(cameraHeight * relativeObjectHeight);
         mMinSize.width = 0 >= width ? 0 : (cameraWidth < width ? cameraWidth : width); // width [0, cameraWidth]
         mMinSize.height = 0 >= height ? 0 : (cameraHeight < height ? cameraHeight : height); // height [0, cameraHeight]
         return mMinSize;

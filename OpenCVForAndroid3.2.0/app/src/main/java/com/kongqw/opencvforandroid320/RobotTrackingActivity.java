@@ -7,9 +7,11 @@ import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 import com.kongqw.RobotTrackingView;
 import com.kongqw.listener.OnCalcBackProjectListener;
+import com.kongqw.listener.OnObjectTrackingListener;
 
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
@@ -42,6 +44,23 @@ public class RobotTrackingActivity extends Activity {
                         }
                         Utils.matToBitmap(backProject, bitmap);
                         imageView.setImageBitmap(bitmap);
+                    }
+                });
+            }
+        });
+        robotTrackingView.setOnObjectTrackingListener(new OnObjectTrackingListener() {
+            @Override
+            public void onObjectLocation() {
+
+            }
+
+            @Override
+            public void onObjectLost() {
+                RobotTrackingActivity.this.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(getApplicationContext(), "目标丢失", Toast.LENGTH_SHORT).show();
+                        imageView.setImageBitmap(null);
                     }
                 });
             }

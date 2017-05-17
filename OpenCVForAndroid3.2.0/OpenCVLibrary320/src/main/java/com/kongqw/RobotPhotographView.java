@@ -43,10 +43,11 @@ public class RobotPhotographView extends BaseRobotCameraView {
         mRgba = inputFrame.rgba();
         mGray = inputFrame.gray();
         // 检测人脸  最小大小占屏比 0.2
-        Rect[] detectObject = mObjectDetector.detectObject(mFaceDetector, mGray, 0.2F);
-        for (Rect rect : detectObject) {
+        // Rect[] detectObject = mObjectDetector.detectObject(mFaceDetector, mGray, 0.2F);
+        Rect face = mObjectDetector.detectFace(mFaceDetector, mGray);
+        if (null != face) {
             // 画出人脸位置
-            Imgproc.rectangle(mRgba, rect.tl(), rect.br(), FACE_RECT_COLOR, 3);
+            Imgproc.rectangle(mRgba, face.tl(), face.br(), FACE_RECT_COLOR, 3);
         }
         return mRgba;
     }
