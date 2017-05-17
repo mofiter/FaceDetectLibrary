@@ -1,6 +1,9 @@
 package com.kongqw;
 
 import android.graphics.Bitmap;
+import android.util.Log;
+
+import com.kongqw.listener.OnCalcBackProjectListener;
 
 import org.opencv.android.Utils;
 import org.opencv.core.Core;
@@ -23,38 +26,36 @@ import java.util.Vector;
  * Created by kongqingwei on 2017/4/26.
  * ObjectTracker
  */
-public abstract class ObjectTracker {
+public class ObjectTracker {
+
+    private static final String TAG = "ObjectTracker";
+    private OnCalcBackProjectListener mOnCalcBackProjectListener;
     private Mat hsv, hue, mask, prob;
     private Rect trackRect;
     private RotatedRect rotatedRect;
     private Mat hist;
     private List<Mat> hsvList, hueList;
-    private Bitmap bitmap;
     private MatOfFloat ranges;
 
-    public abstract void onCalcBackProject(Bitmap prob);
-
-    public ObjectTracker(Mat rgba) {
+    public ObjectTracker() {
         hist = new Mat();
         trackRect = new Rect();
         rotatedRect = new RotatedRect();
         hsvList = new Vector<>();
         hueList = new Vector<>();
 
-        hsv = new Mat(rgba.size(), CvType.CV_8UC3);
-        mask = new Mat(rgba.size(), CvType.CV_8UC1);
-        hue = new Mat(rgba.size(), CvType.CV_8UC1);
-
-        prob = new Mat(rgba.size(), CvType.CV_8UC1);
-        bitmap = Bitmap.createBitmap(prob.width(), prob.height(), Bitmap.Config.ARGB_8888);
-
         ranges = new MatOfFloat(0f, 256f);
     }
 
-    public Bitmap createTrackedObject(Mat mRgba, Rect region) {
+    public Bitmap createTrackedObject(Mat rgba, Rect region) {
+
+        hsv = new Mat(rgba.size(), CvType.CV_8UC3);
+        mask = new Mat(rgba.size(), CvType.CV_8UC1);
+        hue = new Mat(rgba.size(), CvType.CV_8UC1);
+        prob = new Mat(rgba.size(), CvType.CV_8UC1);
 
         //将rgb摄像头帧转化成hsv空间的
-        rgba2Hsv(mRgba);
+        rgba2Hsv(rgba);
 
         updateHueImage();
 
@@ -122,17 +123,25 @@ public abstract class ObjectTracker {
         // 追踪目标
         rotatedRect = Video.CamShift(prob, trackRect, new TermCriteria(TermCriteria.EPS, 10, 1));
 
+        if (null != mOnCalcBackProjectListener) {
+            mOnCalcBackProjectListener.onCalcBackProject(prob);
+        }
+
         // 将本次最终到的目标作为下次追踪的对象
         trackRect = rotatedRect.boundingRect();
 
-        rotatedRect.angle = -rotatedRect.angle;
-
         Imgproc.rectangle(prob, trackRect.tl(), trackRect.br(), new Scalar(255, 255, 0, 255), 6);
 
-        Utils.matToBitmap(prob, bitmap);
-
-        onCalcBackProject(bitmap);
-
+        Log.i(TAG, "objectTracking: 宽度 : " + trackRect.width + "  高度 : " + trackRect.height + "  角度 : " + rotatedRect.angle);
         return rotatedRect;
+    }
+
+    /**
+     * 添加直方图反投影的监听
+     *
+     * @param listener listener
+     */
+    public void setOnCalcBackProjectListener(OnCalcBackProjectListener listener) {
+        mOnCalcBackProjectListener = listener;
     }
 }

@@ -10,7 +10,6 @@ import android.widget.ImageView;
 
 import com.kongqw.RobotTrackingView;
 import com.kongqw.listener.OnCalcBackProjectListener;
-import com.kongqw.listener.OnOpenCVLoadListener;
 
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
@@ -28,35 +27,25 @@ public class RobotTrackingActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_robot_tracking);
 
+        imageView = (ImageView) findViewById(R.id.image_view);
+
         robotTrackingView = (RobotTrackingView) findViewById(R.id.tracking_view);
-        robotTrackingView.setOnOpenCVLoadListener(new OnOpenCVLoadListener() {
+        robotTrackingView.setOnCalcBackProjectListener(new OnCalcBackProjectListener() {
             @Override
-            public void onOpenCVLoadSuccess() {
-                robotTrackingView.setOnCalcBackProjectListener(new OnCalcBackProjectListener() {
+            public void onCalcBackProject(final Mat backProject) {
+                Log.i(TAG, "onCalcBackProject: " + backProject);
+                RobotTrackingActivity.this.runOnUiThread(new Runnable() {
                     @Override
-                    public void onCalcBackProject(final Mat backProject) {
-                        Log.i(TAG, "onCalcBackProject: " + backProject);
-                        RobotTrackingActivity.this.runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                if (null == bitmap) {
-                                    bitmap = Bitmap.createBitmap(backProject.width(), backProject.height(), Bitmap.Config.ARGB_8888);
-                                }
-                                Utils.matToBitmap(backProject, bitmap);
-                                imageView.setImageBitmap(bitmap);
-                            }
-                        });
+                    public void run() {
+                        if (null == bitmap) {
+                            bitmap = Bitmap.createBitmap(backProject.width(), backProject.height(), Bitmap.Config.ARGB_8888);
+                        }
+                        Utils.matToBitmap(backProject, bitmap);
+                        imageView.setImageBitmap(bitmap);
                     }
                 });
             }
-
-            @Override
-            public void onOpenCVLoadFail() {
-
-            }
         });
-
-        imageView = (ImageView) findViewById(R.id.image_view);
     }
 
     public void swapCamera(View view) {
